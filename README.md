@@ -48,4 +48,4 @@ EQF-Projectは、Minecraft (Paper/Spigot) サーバー向けの高度で拡張�
 
 ## ライセンス
 
-本プロジェクトは個人のプロジェクトとして管理されています。
+本プロジェクトはRuskServer(RS Studio)のプロジェクトとして管理されています。
