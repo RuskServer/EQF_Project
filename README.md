@@ -1,4 +1,4 @@
-# EQF-Project (Easy Quest Framework)
+# EQF-Project (Echoes Quest Framework)
 
 EQF-Projectは、Minecraft (Paper/Spigot) サーバー向けの高度で拡張可能なクエストシステムフレームワークです。
 
