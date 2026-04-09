@@ -15,6 +15,7 @@ import com.lunar_prototype.eqf.module.core.CompleteAction;
 import com.lunar_prototype.eqf.module.core.DialogueAction;
 import com.lunar_prototype.eqf.module.core.GiveItemAction;
 import com.lunar_prototype.eqf.module.core.InteractTrigger;
+import com.lunar_prototype.eqf.module.core.LocationTrigger;
 import com.lunar_prototype.eqf.module.core.MessageAction;
 import com.lunar_prototype.eqf.module.core.NextAction;
 import com.lunar_prototype.eqf.module.core.ParallelAction;
@@ -57,6 +58,7 @@ public class EQFPlugin extends JavaPlugin implements Listener {
         ActionRegistry.registerAction("dialogue", new DialogueAction.Factory());
         TriggerRegistry.registerTrigger("interact", new InteractTrigger.Factory());
         TriggerRegistry.registerTrigger("kill", new KillTrigger.Factory());
+        TriggerRegistry.registerTrigger("location", new LocationTrigger.Factory());
         PluginManager pm = getServer().getPluginManager();
         Plugin worldGuard = pm.getPlugin("WorldGuard");
         if (worldGuard != null && worldGuard.isEnabled()) {
@@ -115,6 +117,26 @@ public class EQFPlugin extends JavaPlugin implements Listener {
 
     public static EQFPlugin getInstance() {
         return instance;
+    }
+
+    /**
+     * Registers a custom action type.
+     * @param id The unique identifier for the action.
+     * @param factory The factory to create the action instances.
+     */
+    public void registerAction(String id, EQFActionFactory factory) {
+        ActionRegistry.registerAction(id, factory);
+        getLogger().info("Registered custom action: " + id);
+    }
+
+    /**
+     * Registers a custom trigger type.
+     * @param id The unique identifier for the trigger.
+     * @param factory The factory to create the trigger instances.
+     */
+    public void registerTrigger(String id, EQFTriggerFactory factory) {
+        TriggerRegistry.registerTrigger(id, factory);
+        getLogger().info("Registered custom trigger: " + id);
     }
 
     public QuestManager getQuestManager() {

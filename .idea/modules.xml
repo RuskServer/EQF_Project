@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/eqf_project.iml" filepath="$PROJECT_DIR$/eqf_project.iml" />
+      <module fileurl="file://$PROJECT_DIR$/EQF-Project.iml" filepath="$PROJECT_DIR$/EQF-Project.iml" />
     </modules>
   </component>
 </project>
