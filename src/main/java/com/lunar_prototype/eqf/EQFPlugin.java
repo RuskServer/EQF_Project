@@ -1,5 +1,7 @@
 package com.lunar_prototype.eqf;
 
+import com.lunar_prototype.eqf.api.EQFActionFactory;
+import com.lunar_prototype.eqf.api.EQFTriggerFactory;
 import com.lunar_prototype.eqf.command.EQFCommandExecutor;
 import com.lunar_prototype.eqf.dsl.QuestLoader;
 import com.lunar_prototype.eqf.execution.QuestManager;
