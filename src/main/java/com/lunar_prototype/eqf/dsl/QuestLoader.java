@@ -20,7 +20,6 @@ import java.util.Map;
 import java.util.logging.Level;
 import org.yaml.snakeyaml.Yaml;
 
-/* JADX INFO: loaded from: EQF-Project-1.0-SNAPSHOT.jar:com/lunar_prototype/eqf/dsl/QuestLoader.class */
 public class QuestLoader {
     private final EQFPlugin plugin;
     private final Path questDir;
@@ -32,27 +31,24 @@ public class QuestLoader {
     }
 
     public void loadAll() {
-        if (!Files.exists(this.questDir, new LinkOption[0])) {
+        if (!Files.exists(this.questDir)) {
             try {
-                Files.createDirectories(this.questDir, new FileAttribute[0]);
+                Files.createDirectories(this.questDir);
             } catch (Exception e) {
                 this.plugin.getLogger().severe("Could not create quest directory: " + e.getMessage());
                 return;
             }
         }
-        File[] files = this.questDir.toFile().listFiles((dir, name) -> {
-            return name.endsWith(".yml") || name.endsWith(".yaml");
-        });
-        if (files == null) {
-            return;
-        }
+        File[] files = this.questDir.toFile().listFiles((dir, name) -> name.endsWith(".yml") || name.endsWith(".yaml"));
+        if (files == null) return;
+        
         for (File file : files) {
             try {
                 Quest quest = loadQuest(file);
                 this.plugin.getQuestManager().registerQuest(quest);
                 this.plugin.getLogger().info("Loaded quest: " + quest.getId());
-            } catch (Exception e2) {
-                this.plugin.getLogger().log(Level.SEVERE, "Failed to load quest file: " + file.getName(), (Throwable) e2);
+            } catch (Exception e) {
+                this.plugin.getLogger().log(Level.SEVERE, "Failed to load quest file: " + file.getName(), e);
             }
         }
     }
@@ -60,11 +56,10 @@ public class QuestLoader {
     private Quest loadQuest(File file) throws Exception {
         InputStream is = new FileInputStream(file);
         try {
-            Map<String, Object> data = (Map) this.yaml.load(is);
+            Map<String, Object> data = (Map<String, Object>) this.yaml.load(is);
             if (data == null) throw new IllegalArgumentException("YAML data is empty");
 
-            // Key mapping for flexibility
-            String id = (String) data.getOrDefault("QuestID", data.getOrDefault("id", file.getName().replace(".yml", "")));
+            String id = (String) data.getOrDefault("QuestID", data.getOrDefault("id", file.getName().replace(".yml", "").replace(".yaml", "")));
             Quest quest = new Quest(id);
             
             String initialStage = (String) data.get("InitialStage");
@@ -79,32 +74,30 @@ public class QuestLoader {
             quest.setVersion(((Number) data.getOrDefault("Version", data.getOrDefault("version", 1))).intValue());
             quest.setRepeatable(((Boolean) data.getOrDefault("Repeatable", data.getOrDefault("repeatable", true))).booleanValue());
 
-            Map<String, Object> stagesRaw = (Map) data.get("Stages");
-            if (stagesRaw == null) stagesRaw = (Map) data.get("stages");
+            Map<String, Object> stagesRaw = (Map<String, Object>) data.get("Stages");
+            if (stagesRaw == null) stagesRaw = (Map<String, Object>) data.get("stages");
             
             Map<String, Stage> stages = new LinkedHashMap<>();
             if (stagesRaw != null) {
                 for (Map.Entry<String, Object> entry : stagesRaw.entrySet()) {
                     String stageId = entry.getKey();
-                    Map<String, Object> stageData = (Map) entry.getValue();
-                    stages.put(stageId, parseStage(stageId, stageData));
+                    Object val = entry.getValue();
+                    if (val instanceof Map) {
+                        stages.put(stageId, parseStage(stageId, (Map<String, Object>) val));
+                    }
                 }
             }
             quest.setStages(stages);
 
-            List<Map<String, Object>> triggersRaw = (List) data.get("StartTriggers");
-            if (triggersRaw == null) triggersRaw = (List) data.get("start_triggers");
-            if (triggersRaw == null) triggersRaw = (List) data.get("triggers");
+            Object triggersRaw = data.get("StartTriggers");
+            if (triggersRaw == null) triggersRaw = data.get("start_triggers");
+            if (triggersRaw == null) triggersRaw = data.get("triggers");
             
             quest.setStartTriggers(parseTriggers(triggersRaw));
             is.close();
             return quest;
         } catch (Throwable th) {
-            try {
-                is.close();
-            } catch (Throwable th2) {
-                th.addSuppressed(th2);
-            }
+            try { is.close(); } catch (Throwable th2) { th.addSuppressed(th2); }
             throw th;
         }
     }
@@ -114,55 +107,77 @@ public class QuestLoader {
         stage.setId(id);
         stage.setDescription((String) data.getOrDefault("Description", data.get("description")));
         
-        List<Map<String, Object>> triggerList = (List) data.get("Triggers");
-        if (triggerList == null) triggerList = (List) data.get("triggers");
-        if (triggerList == null) triggerList = (List) data.get("trigger");
+        Object triggerObj = data.get("Triggers");
+        if (triggerObj == null) triggerObj = data.get("triggers");
+        if (triggerObj == null) triggerObj = data.get("trigger");
         
-        if (triggerList != null) {
-            stage.setTriggers(parseTriggers(triggerList));
+        stage.setTriggers(parseTriggers(triggerObj));
+        
+        Object actionObj = data.get("Actions");
+        if (actionObj == null) actionObj = data.get("actions");
+        
+        if (actionObj instanceof List) {
+            stage.setActions(parseActions((List<Object>) actionObj));
         } else {
-            stage.setTriggers(new ArrayList());
-        }
-        
-        List<Object> actionList = (List) data.get("Actions");
-        if (actionList == null) actionList = (List) data.get("actions");
-        
-        if (actionList != null) {
-            stage.setActions(parseActions(actionList));
-        } else {
-            stage.setActions(new ArrayList());
+            stage.setActions(new ArrayList<>());
         }
         return stage;
     }
 
-    private List<TriggerData> parseTriggers(List<Map<String, Object>> rawList) {
+    private List<TriggerData> parseTriggers(Object raw) {
         List<TriggerData> result = new ArrayList<>();
-        if (rawList == null) {
-            return result;
-        }
-        for (Map<String, Object> map : rawList) {
-            String type = (String) map.get("type");
-            Map<String, Object> params = new HashMap<>(map);
-            params.remove("type");
-            result.add(new TriggerData(type, params));
+        if (raw == null) return result;
+
+        if (raw instanceof List) {
+            for (Object obj : (List<?>) raw) {
+                if (obj instanceof Map) {
+                    result.add(parseSingleTrigger((Map<String, Object>) obj));
+                }
+            }
+        } else if (raw instanceof Map) {
+            result.add(parseSingleTrigger((Map<String, Object>) raw));
         }
         return result;
     }
 
+    private TriggerData parseSingleTrigger(Map<String, Object> map) {
+        // Handle format: {type: npc_interact, id: 5}
+        if (map.containsKey("type")) {
+            String type = (String) map.get("type");
+            Map<String, Object> params = new HashMap<>(map);
+            params.remove("type");
+            return new TriggerData(type, params);
+        }
+        
+        // Handle format: {npc_interact: {id: 5}}
+        if (map.size() == 1) {
+            String type = map.keySet().iterator().next();
+            Object value = map.get(type);
+            Map<String, Object> params = new HashMap<>();
+            if (value instanceof Map) {
+                params.putAll((Map<String, Object>) value);
+            } else {
+                params.put("value", value);
+            }
+            return new TriggerData(type, params);
+        }
+
+        return new TriggerData("unknown", map);
+    }
+
     private List<ActionData> parseActions(List<Object> rawList) {
         List<ActionData> result = new ArrayList<>();
-        if (rawList == null) {
-            return result;
-        }
+        if (rawList == null) return result;
+        
         for (Object obj : rawList) {
             if (obj instanceof Map) {
-                Map<String, Object> map = (Map) obj;
+                Map<String, Object> map = (Map<String, Object>) obj;
                 if (map.size() == 1) {
                     String type = map.keySet().iterator().next();
                     Object value = map.get(type);
                     Map<String, Object> params = new HashMap<>();
                     if (value instanceof Map) {
-                        params.putAll((Map) value);
+                        params.putAll((Map<String, Object>) value);
                     } else {
                         params.put("value", value);
                     }
@@ -176,7 +191,7 @@ public class QuestLoader {
                     }
                 }
             } else if (obj instanceof String) {
-                result.add(new ActionData((String) obj, new HashMap()));
+                result.add(new ActionData((String) obj, new HashMap<>()));
             }
         }
         return result;

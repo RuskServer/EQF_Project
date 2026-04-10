@@ -59,7 +59,7 @@ public class EQFPlugin extends JavaPlugin implements Listener {
         ActionRegistry.registerAction("give_item", new GiveItemAction.Factory());
         ActionRegistry.registerAction("complete", new CompleteAction.Factory());
         ActionRegistry.registerAction("parallel", new ParallelAction.Factory());
-        ActionRegistry.registerAction("choose", new ChooseAction.Factory());
+        ActionRegistry.registerAction("choose", new com.lunar_prototype.eqf.module.core.MultipleChoiceAction.Factory());
         ActionRegistry.registerAction("command", new CommandAction.Factory());
         ActionRegistry.registerAction("dialogue", new DialogueAction.Factory());
         ActionRegistry.registerAction("dialogue_npc", new com.lunar_prototype.eqf.module.core.DialogueNPCAction.Factory());

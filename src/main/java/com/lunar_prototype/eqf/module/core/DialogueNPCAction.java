@@ -79,8 +79,15 @@ public class DialogueNPCAction implements EQFAction {
                 // 視線固定
                 if (lockView) {
                     Location playerLoc = player.getLocation();
-                    Location npcLoc = npc.getEntity().getLocation().add(0, 1.2, 0); // 目線の高さ付近
-                    Vector direction = npcLoc.toVector().subtract(playerLoc.toVector()).normalize();
+                    Location playerEye = player.getEyeLocation();
+                    
+                    double npcEyeHeight = 1.62; // 人型NPCの標準的な目の高さ
+                    if (npc.getEntity() instanceof org.bukkit.entity.LivingEntity) {
+                        npcEyeHeight = ((org.bukkit.entity.LivingEntity) npc.getEntity()).getEyeHeight();
+                    }
+                    Location npcEye = npc.getEntity().getLocation().add(0, npcEyeHeight, 0);
+
+                    Vector direction = npcEye.toVector().subtract(playerEye.toVector()).normalize();
                     playerLoc.setDirection(direction);
                     player.teleport(playerLoc);
                 }
