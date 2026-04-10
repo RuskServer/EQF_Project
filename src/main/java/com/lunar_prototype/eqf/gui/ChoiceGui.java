@@ -17,6 +17,7 @@ public class ChoiceGui extends EQFGui {
     private final Map<String, List<EQFAction>> options;
     private final ActionContext context;
     private final CompletableFuture<ActionResult> future;
+    private boolean selected = false;
 
     public ChoiceGui(Player player, String title, Map<String, List<EQFAction>> options, ActionContext context, CompletableFuture<ActionResult> future) {
         super(player, 27, title);
@@ -24,6 +25,10 @@ public class ChoiceGui extends EQFGui {
         this.context = context;
         this.future = future;
         setupItems();
+    }
+
+    public boolean isSelected() {
+        return selected;
     }
 
     private void setupItems() {
@@ -47,6 +52,7 @@ public class ChoiceGui extends EQFGui {
         List<EQFAction> actions = options.get(displayName);
         
         if (actions != null) {
+            selected = true;
             player.closeInventory();
             // 選択されたアクションを実行し、完了したらfutureをcompleteさせる
             ActionExecutor.executeSequence(actions, context).thenAccept(result -> {
