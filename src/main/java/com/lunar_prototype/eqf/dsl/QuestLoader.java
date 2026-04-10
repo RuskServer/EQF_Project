@@ -61,14 +61,27 @@ public class QuestLoader {
         InputStream is = new FileInputStream(file);
         try {
             Map<String, Object> data = (Map) this.yaml.load(is);
-            String id = (String) data.getOrDefault("QuestID", file.getName().replace(".yml", ""));
+            if (data == null) throw new IllegalArgumentException("YAML data is empty");
+
+            // Key mapping for flexibility
+            String id = (String) data.getOrDefault("QuestID", data.getOrDefault("id", file.getName().replace(".yml", "")));
             Quest quest = new Quest(id);
+            
             String initialStage = (String) data.get("InitialStage");
+            if (initialStage == null) initialStage = (String) data.get("initial_stage");
+            if (initialStage == null) initialStage = (String) data.get("initialStage");
             quest.setInitialStage(initialStage);
-            quest.setDisplayName((String) data.get("DisplayName"));
-            quest.setVersion((Integer) data.getOrDefault("Version", 1));
-            quest.setRepeatable(((Boolean) data.getOrDefault("Repeatable", true)).booleanValue());
+
+            String displayName = (String) data.get("DisplayName");
+            if (displayName == null) displayName = (String) data.get("title");
+            quest.setDisplayName(displayName);
+
+            quest.setVersion(((Number) data.getOrDefault("Version", data.getOrDefault("version", 1))).intValue());
+            quest.setRepeatable(((Boolean) data.getOrDefault("Repeatable", data.getOrDefault("repeatable", true))).booleanValue());
+
             Map<String, Object> stagesRaw = (Map) data.get("Stages");
+            if (stagesRaw == null) stagesRaw = (Map) data.get("stages");
+            
             Map<String, Stage> stages = new LinkedHashMap<>();
             if (stagesRaw != null) {
                 for (Map.Entry<String, Object> entry : stagesRaw.entrySet()) {
@@ -78,7 +91,11 @@ public class QuestLoader {
                 }
             }
             quest.setStages(stages);
+
             List<Map<String, Object>> triggersRaw = (List) data.get("StartTriggers");
+            if (triggersRaw == null) triggersRaw = (List) data.get("start_triggers");
+            if (triggersRaw == null) triggersRaw = (List) data.get("triggers");
+            
             quest.setStartTriggers(parseTriggers(triggersRaw));
             is.close();
             return quest;
@@ -95,14 +112,23 @@ public class QuestLoader {
     private Stage parseStage(String id, Map<String, Object> data) {
         Stage stage = new Stage();
         stage.setId(id);
-        stage.setDescription((String) data.get("Description"));
-        if (data.containsKey("Triggers")) {
-            stage.setTriggers(parseTriggers((List) data.get("Triggers")));
+        stage.setDescription((String) data.getOrDefault("Description", data.get("description")));
+        
+        List<Map<String, Object>> triggerList = (List) data.get("Triggers");
+        if (triggerList == null) triggerList = (List) data.get("triggers");
+        if (triggerList == null) triggerList = (List) data.get("trigger");
+        
+        if (triggerList != null) {
+            stage.setTriggers(parseTriggers(triggerList));
         } else {
             stage.setTriggers(new ArrayList());
         }
-        if (data.containsKey("Actions")) {
-            stage.setActions(parseActions((List) data.get("Actions")));
+        
+        List<Object> actionList = (List) data.get("Actions");
+        if (actionList == null) actionList = (List) data.get("actions");
+        
+        if (actionList != null) {
+            stage.setActions(parseActions(actionList));
         } else {
             stage.setActions(new ArrayList());
         }

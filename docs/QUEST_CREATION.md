@@ -82,8 +82,50 @@ stages:
 | `dialogue` | `npc_name`, `lines` | 会話形式のメッセージを表示する。 |
 | `choose` | `title`, `options` | 選択肢をGUIで表示する（各選択肢に `actions` を設定可）。 |
 | `parallel` | `actions` | 複数のアクションを並列に実行する。 |
+| `waypoint` | `action`, `id`, `text`, `x`, `y`, `z`, `world` | ウェイポイント（ゴースト・ホログラム）を表示/非表示にする。 |
+| `dialogue_npc` | `npc_id`, `lines`, `speed`, `lock_view`, `sound` | NPCとの対話演出（視線固定付き）。 |
 
 ---
+
+### 4.2 対話演出アクション (dialogue_npc)
+- **`dialogue_npc`**:
+  - `npc_id`: CitizensのNPC ID。
+  - `lines`: 表示するセリフのリスト。
+  - `speed`: 文字送りの速度 (ticks、デフォルト: 2)。
+  - `lock_view`: プレイヤーの視線をNPCに固定するか (デフォルト: true)。
+  - `sound`: 文字送り時のSE (デフォルト: `BLOCK_NOTE_BLOCK_HARP`)。
+
+#### 設定例
+```yaml
+actions:
+  - dialogue_npc:
+      npc_id: 10
+      lines:
+        - "やあ、よく来たな！"
+        - "君に頼みたいことがあるんだ。"
+      lock_view: true
+      speed: 2
+```
+
+### 4.1 ウェイポイントアクションの詳細
+- **`waypoint`**:
+  - `action`: `show` または `hide` (デフォルト: `show`)
+  - `id`: ウェイポイントを識別するユニークな名前 (例: `target_npc`)
+  - `text`: 表示するテキスト (MiniMessage形式、例: `<yellow>目的地の村長</yellow>`)
+  - `x`, `y`, `z`: 表示座標
+  - `world`: ワールド名 (省略時は現在のワールド)
+
+#### 設定例
+```yaml
+actions:
+  - waypoint:
+      action: "show"
+      id: "objective"
+      text: "<green>▼ 目的地</green>"
+      x: 100.5
+      y: 64.0
+      z: 200.5
+```
 
 ## 5. 実践的な例：簡単な「おつかい」クエスト
 

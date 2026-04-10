@@ -6,6 +6,7 @@ import com.lunar_prototype.eqf.command.EQFCommandExecutor;
 import com.lunar_prototype.eqf.dsl.QuestLoader;
 import com.lunar_prototype.eqf.execution.QuestManager;
 import com.lunar_prototype.eqf.execution.TriggerManager;
+import com.lunar_prototype.eqf.execution.WaypointManager;
 import com.lunar_prototype.eqf.gui.GuiListener;
 import com.lunar_prototype.eqf.module.ActionRegistry;
 import com.lunar_prototype.eqf.module.KillTrigger;
@@ -23,6 +24,7 @@ import com.lunar_prototype.eqf.module.core.NextAction;
 import com.lunar_prototype.eqf.module.core.ParallelAction;
 import com.lunar_prototype.eqf.module.core.SpawnMobAction;
 import com.lunar_prototype.eqf.module.core.WaitAction;
+import com.lunar_prototype.eqf.module.core.WaypointAction;
 import com.lunar_prototype.eqf.module.edf.DungeonRegionEnterTrigger;
 import com.lunar_prototype.eqf.module.mythic.MythicKillTrigger;
 import com.lunar_prototype.eqf.module.mythic.MythicSpawnAction;
@@ -43,11 +45,13 @@ public class EQFPlugin extends JavaPlugin implements Listener {
     private QuestManager questManager;
     private QuestLoader questLoader;
     private PersistenceAdapter persistenceAdapter;
+    private WaypointManager waypointManager;
 
     public void onEnable() {
         instance = this;
         saveDefaultConfig();
         this.persistenceAdapter = new JsonPersistenceAdapter(this);
+        this.waypointManager = new WaypointManager();
         ActionRegistry.registerAction("message", new MessageAction.Factory());
         ActionRegistry.registerAction("next", new NextAction.Factory());
         ActionRegistry.registerAction("wait", new WaitAction.Factory());
@@ -58,6 +62,8 @@ public class EQFPlugin extends JavaPlugin implements Listener {
         ActionRegistry.registerAction("choose", new ChooseAction.Factory());
         ActionRegistry.registerAction("command", new CommandAction.Factory());
         ActionRegistry.registerAction("dialogue", new DialogueAction.Factory());
+        ActionRegistry.registerAction("dialogue_npc", new com.lunar_prototype.eqf.module.core.DialogueNPCAction.Factory());
+        ActionRegistry.registerAction("waypoint", new WaypointAction.Factory(this.waypointManager));
         TriggerRegistry.registerTrigger("interact", new InteractTrigger.Factory());
         TriggerRegistry.registerTrigger("kill", new KillTrigger.Factory());
         TriggerRegistry.registerTrigger("location", new LocationTrigger.Factory());
@@ -94,6 +100,7 @@ public class EQFPlugin extends JavaPlugin implements Listener {
         getServer().getPluginManager().registerEvents(this, this);
         getServer().getPluginManager().registerEvents(new GuiListener(), this);
         getServer().getPluginManager().registerEvents(new TriggerManager(this, this.questManager), this);
+        getServer().getPluginManager().registerEvents(this.waypointManager, this);
         this.questLoader = new QuestLoader(this, getDataFolder().toPath().resolve("quests"));
         this.questLoader.loadAll();
         if (getCommand("eqf") != null) {
