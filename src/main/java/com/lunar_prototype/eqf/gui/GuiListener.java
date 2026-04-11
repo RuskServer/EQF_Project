@@ -33,11 +33,14 @@ public class GuiListener implements Listener {
             ChoiceGui choiceGui = (ChoiceGui) holder;
             if (!choiceGui.isSelected() && event.getPlayer() instanceof Player) {
                 Player player = (Player) event.getPlayer();
-                Bukkit.getScheduler().runTask(EQFPlugin.getInstance(), () -> {
-                    if (player.isOnline()) {
+                // 1ティック待機して、Minecraftのコンテナクローズ処理が完全に完了してから再度開く
+                Bukkit.getScheduler().runTaskLater(EQFPlugin.getInstance(), () -> {
+                    if (player.isOnline() && !choiceGui.isSelected()) {
+                        // 既に別のインベントリが開いている可能性も考慮し、
+                        // 明示的に再度開かせる
                         choiceGui.open();
                     }
-                });
+                }, 1L);
             }
         }
     }
