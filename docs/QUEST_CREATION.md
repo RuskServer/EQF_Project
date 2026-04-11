@@ -70,19 +70,20 @@ stages:
 
 アクションはリスト形式 (`-`) で記述され、上から順に実行されます。
 
-| アクション名 | パラメータ | 説明 |
-| :--- | :--- | :--- |
-| `message` | `value` (文字列) | プレイヤーにメッセージを送信する。 |
-| `next` | `value` (文字列) | 指定したIDのステージへ進行させる。 |
-| `wait` | `value` (秒数) | 次のアクションの実行を待機させる。 |
-| `give_item` | `material`, `amount` | アイテムを与える。 |
-| `spawnmob` | `type`, `amount`, `location` | 指定座標にモブをスポーンさせる。 |
-| `command` | `value` (文字列) | コンソールからコマンドを実行する。(`%player%` 使用可) |
-| `complete` | なし | クエストを完了状態にする。 |
-| `dialogue` | `npc_name`, `lines` | 会話形式のメッセージを表示する。 |
-| `choose` | `title`, `options` | 選択肢をGUIで表示する（各選択肢に `actions` を設定可）。 |
-| `parallel` | `actions` | 複数のアクションを並列に実行する。 |
-| `waypoint` | `action`, `id`, `text`, `x`, `y`, `z`, `world` | ウェイポイント（ゴースト・ホログラム）を表示/非表示にする。 |
+| アクション名         | パラメータ | 説明 |
+|:---------------| :--- | :--- |
+| `message`      | `value` (文字列) | プレイヤーにメッセージを送信する。 |
+| `next`         | `value` (文字列) | 指定したIDのステージへ進行させる。 |
+| `wait`         | `value` (秒数) | 次のアクションの実行を待機させる。 |
+| `give_item`    | `material`, `amount` | アイテムを与える。 |
+| `spawnmob`     | `type`, `amount`, `location` | 指定座標にモブをスポーンさせる。 |
+| `command`      | `value` (文字列) | コンソールからコマンドを実行する。(`%player%` 使用可) |
+| `complete`     | なし | クエストを完了状態にする。 |
+| `dialogue`     | `npc_name`, `lines` | 会話形式のメッセージを表示する。 |
+| `choose`       | `if`, `then`, `else` | 条件に基づいて実行するアクションを分岐させる。 |
+| `choice`       | `title`, `options` | 選択肢をGUIで表示する（各選択肢に `actions` を設定可）。 |
+| `parallel`     | `actions` | 複数のアクションを並列に実行する。 |
+| `waypoint`     | `action`, `id`, `text`, `x`, `y`, `z`, `world` | ウェイポイント（ゴースト・ホログラム）を表示/非表示にする。 |
 | `dialogue_npc` | `npc_id`, `lines`, `speed`, `lock_view`, `sound` | NPCとの対話演出（視線固定付き）。 |
 
 ---
@@ -107,7 +108,63 @@ actions:
       speed: 2
 ```
 
-### 4.1 ウェイポイントアクションの詳細
+### 4.3 条件分岐と選択肢 (choose / choice)
+
+#### 1. 条件分岐 (`choose`)
+特定の条件（プレイヤーの持ち物、ステータス、進行度など）に基づいて、実行するアクションを分岐させます。
+
+- `if`: 評価する条件式（詳細は後述）。
+- `then`: 条件が **真 (true)** の場合に実行するアクション（リスト形式または単体のアクションID）。
+- `else`: 条件が **偽 (false)** の場合に実行するアクション。
+
+**設定例：**
+```yaml
+actions:
+  - choose:
+      if: "player.has_item:DIAMOND:1"
+      then:
+        - message: "ダイヤモンドを持っているな！合格だ。"
+        - next: "success_stage"
+      else:
+        - message: "ダイヤモンドを持っていないようだ。出直してこい。"
+```
+
+#### 利用可能な条件式 (Conditions)
+`choose` アクションの `if` パラメータで使用できる構文です。
+
+| 構文 | 説明 | 例 |
+| :--- | :--- | :--- |
+| `player.has_item:ID:数量` | 指定したアイテムを所持しているか。 | `player.has_item:BREAD:3` |
+| `player.stat:種別:値` | 指定したステータスが一定以上か。 | `player.stat:STRENGTH:10` |
+| `&&` | かつ (AND) | `cond1 && cond2` |
+| `||` | または (OR) | `cond1 || cond2` |
+
+- **ステータス種別**: `STRENGTH`, `INTELLIGENCE`, `DEXTERITY` など (DeepWitherプラグインに依存)。
+- **アイテムID**: Bukkitの [Material](https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Material.html) 名を指定してください。
+
+#### 2. 選択肢 GUI (`choice`)
+プレイヤーに複数の選択肢をGUIで提示し、選んだ内容に応じて異なるアクションを実行させます。
+
+- `title`: GUIのタイトル (デフォルト: "選択してください")。
+- `options`: 選択肢の設定（キーが選択肢名、値がアクションのリスト）。
+
+**設定例：**
+```yaml
+actions:
+  - choice:
+      title: "どの道を進む？"
+      options:
+        "勇者の道":
+          - message: "茨の道を選んだか…。幸運を。"
+          - next: "hero_route"
+        "賢者の道":
+          - message: "知識こそが力だ。図書館へ向かえ。"
+          - next: "sage_route"
+        "逃げる":
+          - message: "またいつでも戻ってくるといい。"
+```
+
+### 4.4 ウェイポイントアクションの詳細
 - **`waypoint`**:
   - `action`: `show` または `hide` (デフォルト: `show`)
   - `id`: ウェイポイントを識別するユニークな名前 (例: `target_npc`)
