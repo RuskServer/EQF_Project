@@ -4,6 +4,7 @@ import com.lunar_prototype.eqf.api.EQFActionFactory;
 import com.lunar_prototype.eqf.api.EQFTriggerFactory;
 import com.lunar_prototype.eqf.command.EQFCommandExecutor;
 import com.lunar_prototype.eqf.dsl.QuestLoader;
+import com.lunar_prototype.eqf.execution.QuestIndicatorManager;
 import com.lunar_prototype.eqf.execution.QuestManager;
 import com.lunar_prototype.eqf.execution.TriggerManager;
 import com.lunar_prototype.eqf.execution.WaypointManager;
@@ -34,6 +35,7 @@ public class EQFPlugin extends JavaPlugin implements Listener {
     private QuestLoader questLoader;
     private PersistenceAdapter persistenceAdapter;
     private WaypointManager waypointManager;
+    private QuestIndicatorManager indicatorManager;
 
     public void onEnable() {
         instance = this;
@@ -86,6 +88,13 @@ public class EQFPlugin extends JavaPlugin implements Listener {
             getLogger().warning("MythicMobs not found. MM integration disabled.");
         }
         this.questManager = new QuestManager(this, this.persistenceAdapter);
+        
+        Plugin citizensForIndicator = getServer().getPluginManager().getPlugin("Citizens");
+        if (citizensForIndicator != null && citizensForIndicator.isEnabled()) {
+            this.indicatorManager = new QuestIndicatorManager(this);
+            this.indicatorManager.runTaskTimer(this, 20L, 20L);
+        }
+
         getServer().getPluginManager().registerEvents(this, this);
         getServer().getPluginManager().registerEvents(new GuiListener(), this);
         getServer().getPluginManager().registerEvents(new TriggerManager(this, this.questManager), this);
@@ -111,6 +120,9 @@ public class EQFPlugin extends JavaPlugin implements Listener {
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
         this.questManager.unloadPlayerStates(event.getPlayer().getUniqueId());
+        if (this.indicatorManager != null) {
+            this.indicatorManager.cleanupPlayer(event.getPlayer());
+        }
     }
 
     public static EQFPlugin getInstance() {

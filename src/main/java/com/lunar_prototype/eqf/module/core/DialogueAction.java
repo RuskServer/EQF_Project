@@ -83,14 +83,29 @@ public class DialogueAction implements EQFAction {
     public static class Factory implements EQFActionFactory {
         @Override // com.lunar_prototype.eqf.api.EQFActionFactory
         public EQFAction create(Map<String, Object> params) {
-            String text = (String) params.get("text");
-            if (text == null && params.containsKey("value")) {
-                text = String.valueOf(params.get("value"));
+            String text = null;
+            Object textObj = params.get("text");
+            if (textObj == null) textObj = params.get("value");
+            if (textObj == null) textObj = params.get("lines");
+
+            if (textObj instanceof java.util.List) {
+                java.util.List<?> list = (java.util.List<?>) textObj;
+                java.util.StringJoiner joiner = new java.util.StringJoiner(" ");
+                for (Object obj : list) {
+                    joiner.add(String.valueOf(obj));
+                }
+                text = joiner.toString();
+            } else if (textObj != null) {
+                text = String.valueOf(textObj);
             }
+
             if (text == null) {
-                throw new IllegalArgumentException("Dialogue action requires 'text'.");
+                throw new IllegalArgumentException("Dialogue action requires 'text', 'value', or 'lines'.");
             }
-            String speaker = (String) params.getOrDefault("speaker", null);
+
+            Object speakerObj = params.getOrDefault("speaker", params.get("npc_name"));
+            String speaker = speakerObj != null ? String.valueOf(speakerObj) : null;
+            
             int speed = 2;
             if (params.containsKey("speed") && (params.get("speed") instanceof Number)) {
                 speed = ((Number) params.get("speed")).intValue();
@@ -98,7 +113,7 @@ public class DialogueAction implements EQFAction {
             Sound sound = null;
             if (params.containsKey("sound")) {
                 try {
-                    sound = Sound.valueOf(((String) params.get("sound")).toUpperCase());
+                    sound = Sound.valueOf(String.valueOf(params.get("sound")).toUpperCase());
                 } catch (IllegalArgumentException e) {
                 }
             }
