@@ -37,7 +37,6 @@ public class TriggerManager implements Listener {
     public TriggerManager(EQFPlugin plugin, QuestManager questManager) {
         this.plugin = plugin;
         this.questManager = questManager;
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
     @EventHandler
@@ -45,7 +44,9 @@ public class TriggerManager implements Listener {
         if (event.getHand() == EquipmentSlot.OFF_HAND) {
             return;
         }
-        checkAndDispatchTriggers(event.getPlayer(), event);
+        if (checkAndDispatchTriggers(event.getPlayer(), event)) {
+            event.setCancelled(true);
+        }
     }
 
     @EventHandler
@@ -73,27 +74,27 @@ public class TriggerManager implements Listener {
 
     @EventHandler
     public void onNPCInteract(NPCRightClickEvent event) {
+        // Citizens may use getHand() or getClicker().getActiveItemHand()
+        // We'll use getClicker().getActiveItemHand() as found in the file
         if (event.getClicker().getActiveItemHand() != EquipmentSlot.HAND) {
             return;
         }
-        if (event.isCancelled()) {
-            EQFPlugin.getInstance().getLogger().warning("[EQF Debug: NPCInteract] NPCInteractEvent is cancelled! This may prevent EQF triggers from firing.");
+        if (checkAndDispatchTriggers(event.getClicker(), event)) {
+            event.setCancelled(true);
         }
-        checkAndDispatchTriggers(event.getClicker(), event);
     }
 
-    private <E extends Event> void checkAndDispatchTriggers(Player player, E event) {
+    private <E extends Event> boolean checkAndDispatchTriggers(Player player, E event) {
         Stage currentStage;
+        boolean handled = false;
         for (Quest quest : this.questManager.getQuestDefinitions().values()) {
             PlayerQuestState state = this.questManager.getPlayerState(player, quest.getId());
             if (!state.isExecuting()) {
                 if (!state.isStarted()) {
                     if (quest.isRepeatable() || !"COMPLETED".equals(state.getCurrentStage())) {
-                        if (!checkTriggers(quest.getStartTriggers(), event, state)) {
-                            continue;
-                        } else {
+                        if (checkTriggers(quest.getStartTriggers(), event, state)) {
                             if (isDebounced(player.getUniqueId())) {
-                                return;
+                                return true;
                             }
                             updateDebounce(player.getUniqueId());
                             this.plugin.getLogger().info(player.getName() + " started quest via trigger: " + quest.getId());
@@ -106,22 +107,25 @@ public class TriggerManager implements Listener {
                             } else {
                                 state.setExecuting(false);
                             }
+                            handled = true;
                         }
                     }
                 } else {
                     String stageId = state.getCurrentStage();
                     if (stageId != null && !stageId.equals("COMPLETED") && !stageId.equals("COMPLETED_ADMIN") && (currentStage = quest.getStages().get(stageId)) != null && checkTriggers(currentStage.getTriggers(), event, state) && checkConditions(player, currentStage.getConditions())) {
                         if (isDebounced(player.getUniqueId())) {
-                            return;
+                            return true;
                         }
                         updateDebounce(player.getUniqueId());
                         this.plugin.getLogger().info(player.getName() + " advanced quest: " + quest.getId());
                         state.setExecuting(true);
                         executeActionsWithLock(player, quest, currentStage.getActions(), state);
+                        handled = true;
                     }
                 }
             }
         }
+        return handled;
     }
 
     private boolean isDebounced(UUID playerUUID) {
