@@ -25,7 +25,7 @@ public class CompleteAction implements EQFAction {
         state.setStarted(false);
         state.setCurrentStage("COMPLETED");
         this.questManager.savePlayerStates(context.getPlayer().getUniqueId());
-        context.getPlayer().sendMessage("§6[EQF] クエスト「" + context.getQuest().getDisplayName() + "」が完了しました！");
+        context.getPlayer().sendMessage("§6§l[EQF] §eクエスト「" + context.getQuest().getDisplayName() + "」を完了しました！");
         return CompletableFuture.completedFuture(ActionResult.SUCCESS);
     }
 

@@ -30,7 +30,8 @@ public class SpawnMobAction implements EQFAction {
         if (this.locationKey.equalsIgnoreCase("player")) {
             spawnLoc = player.getLocation();
         } else {
-            player.sendMessage("§c[EQF] LocationResolverが未実装のため、プレイヤーの位置に出現させます。");
+            // Log to console instead of spamming player
+            EQFPlugin.getInstance().getLogger().info("LocationResolver not implemented, spawning mob at player position.");
             spawnLoc = player.getLocation();
         }
         for (int i = 0; i < this.count; i++) {
@@ -39,7 +40,6 @@ public class SpawnMobAction implements EQFAction {
                 player.getWorld().spawnEntity(location, this.entityType);
             });
         }
-        player.sendMessage("§c[EQF] " + this.entityType.name() + "を" + this.count + "体出現させました。");
         return CompletableFuture.completedFuture(ActionResult.SUCCESS);
     }
 

@@ -28,7 +28,6 @@ public class NextAction implements EQFAction {
         }
         state.setCurrentStage(this.nextStageId);
         this.questManager.savePlayerStates(context.getPlayer().getUniqueId());
-        context.getPlayer().sendMessage("§6[EQF] ステージが「" + this.nextStageId + "」に遷移しました。");
         return CompletableFuture.completedFuture(ActionResult.SUCCESS);
     }
 

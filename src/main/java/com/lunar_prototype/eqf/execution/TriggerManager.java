@@ -73,6 +73,9 @@ public class TriggerManager implements Listener {
 
     @EventHandler
     public void onNPCInteract(NPCRightClickEvent event) {
+        if (event.getClicker().getActiveItemHand() != EquipmentSlot.HAND) {
+            return;
+        }
         if (event.isCancelled()) {
             EQFPlugin.getInstance().getLogger().warning("[EQF Debug: NPCInteract] NPCInteractEvent is cancelled! This may prevent EQF triggers from firing.");
         }

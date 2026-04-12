@@ -23,7 +23,11 @@ public class CommandAction implements EQFAction {
 
     @Override // com.lunar_prototype.eqf.api.EQFAction
     public CompletableFuture<ActionResult> execute(ActionContext context) {
-        String executableCommand = this.command.replace("%player_name%", context.getPlayer().getName());
+        String executableCommand = this.command
+                .replace("%player_name%", context.getPlayer().getName())
+                .replace("%player%", context.getPlayer().getName())
+                .replace("%uuid%", context.getPlayer().getUniqueId().toString());
+        
         CommandSender sender = this.runAsConsole ? Bukkit.getConsoleSender() : context.getPlayer();
 
         this.plugin.getServer().getScheduler().runTask(this.plugin, () -> {
