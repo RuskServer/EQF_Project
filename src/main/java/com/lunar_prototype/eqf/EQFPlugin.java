@@ -110,8 +110,14 @@ public class EQFPlugin extends JavaPlugin implements Listener {
     }
 
     public void onDisable() {
+        if (this.indicatorManager != null) {
+            this.indicatorManager.cancel();
+            for (Player onlinePlayer : getServer().getOnlinePlayers()) {
+                this.indicatorManager.cleanupPlayer(onlinePlayer);
+            }
+        }
         for (Player onlinePlayer : getServer().getOnlinePlayers()) {
-            this.questManager.savePlayerStates(onlinePlayer.getUniqueId());
+            this.questManager.savePlayerStates(onlinePlayer.getUniqueId(), false);
         }
         this.persistenceAdapter.close();
         getLogger().info("Echoes Quest Framework has been disabled.");

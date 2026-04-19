@@ -47,13 +47,25 @@ public class QuestManager {
     }
 
     public void savePlayerStates(UUID playerUuid) {
-        this.plugin.getServer().getScheduler().runTaskAsynchronously(this.plugin, () -> {
-            Collection<PlayerQuestState> statesToSave = getPlayerAllStates(playerUuid);
-            if (!statesToSave.isEmpty()) {
-                this.persistenceAdapter.saveAllStates(playerUuid, statesToSave);
-                this.plugin.getLogger().info("Saved " + statesToSave.size() + " quest states for " + String.valueOf(playerUuid));
-            }
-        });
+        savePlayerStates(playerUuid, true);
+    }
+
+    public void savePlayerStates(UUID playerUuid, boolean async) {
+        if (async && this.plugin.isEnabled()) {
+            this.plugin.getServer().getScheduler().runTaskAsynchronously(this.plugin, () -> {
+                savePlayerStatesInternal(playerUuid);
+            });
+        } else {
+            savePlayerStatesInternal(playerUuid);
+        }
+    }
+
+    private void savePlayerStatesInternal(UUID playerUuid) {
+        Collection<PlayerQuestState> statesToSave = getPlayerAllStates(playerUuid);
+        if (!statesToSave.isEmpty()) {
+            this.persistenceAdapter.saveAllStates(playerUuid, statesToSave);
+            this.plugin.getLogger().info("Saved " + statesToSave.size() + " quest states for " + String.valueOf(playerUuid));
+        }
     }
 
     public void unloadPlayerStates(UUID playerUuid) {
