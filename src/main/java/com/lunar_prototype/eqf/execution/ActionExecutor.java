@@ -27,7 +27,6 @@ public class ActionExecutor {
                 EQFPlugin.getInstance().getLogger().warning("Failed to create action: " + data.type);
             }
         }
-        executeSequence(actions, context);
         return executeSequence(actions, context);
     }
 
