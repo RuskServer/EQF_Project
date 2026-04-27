@@ -43,5 +43,27 @@ public class WaitAction implements EQFAction {
                 throw new IllegalArgumentException("Wait value must be a number.", e);
             }
         }
+
+        @Override
+        public com.lunar_prototype.eqf.api.ValidationResult validate(Map<String, Object> params) {
+            com.lunar_prototype.eqf.api.ValidationResult result = new com.lunar_prototype.eqf.api.ValidationResult();
+            if (!params.containsKey("value")) {
+                result.addError("Wait action requires a 'value' (seconds).");
+            } else {
+                Object value = params.get("value");
+                try {
+                    if (value instanceof Number) {
+                        if (((Number) value).doubleValue() < 0) {
+                            result.addError("Wait delay cannot be negative.");
+                        }
+                    } else {
+                        Double.parseDouble(String.valueOf(value));
+                    }
+                } catch (NumberFormatException e) {
+                    result.addError("Wait value must be a number.");
+                }
+            }
+            return result;
+        }
     }
 }

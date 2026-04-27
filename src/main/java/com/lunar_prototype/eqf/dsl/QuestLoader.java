@@ -1,10 +1,13 @@
 package com.lunar_prototype.eqf.dsl;
 
 import com.lunar_prototype.eqf.EQFPlugin;
+import com.lunar_prototype.eqf.api.ValidationResult;
 import com.lunar_prototype.eqf.model.ActionData;
 import com.lunar_prototype.eqf.model.Quest;
 import com.lunar_prototype.eqf.model.Stage;
 import com.lunar_prototype.eqf.model.TriggerData;
+import com.lunar_prototype.eqf.module.ActionRegistry;
+import com.lunar_prototype.eqf.module.TriggerRegistry;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
@@ -41,14 +44,131 @@ public class QuestLoader {
         }
         File[] files = this.questDir.toFile().listFiles((dir, name) -> name.endsWith(".yml") || name.endsWith(".yaml"));
         if (files == null) return;
-        
+
+        int loadedCount = 0;
+        int errorCount = 0;
+
         for (File file : files) {
             try {
+                ValidationResult result = validateQuestFile(file);
+                if (result.hasErrors()) {
+                    this.plugin.getLogger().severe("Failed to load quest file: " + file.getName());
+                    for (String error : result.getErrors()) {
+                        this.plugin.getLogger().severe("  - " + error);
+                    }
+                    errorCount++;
+                    continue;
+                }
+
+                if (result.hasWarnings()) {
+                    this.plugin.getLogger().warning("Warnings while loading quest file: " + file.getName());
+                    for (String warning : result.getWarnings()) {
+                        this.plugin.getLogger().warning("  - " + warning);
+                    }
+                }
+
                 Quest quest = loadQuest(file);
                 this.plugin.getQuestManager().registerQuest(quest);
                 this.plugin.getLogger().info("Loaded quest: " + quest.getId());
+                loadedCount++;
             } catch (Exception e) {
-                this.plugin.getLogger().log(Level.SEVERE, "Failed to load quest file: " + file.getName(), e);
+                this.plugin.getLogger().log(Level.SEVERE, "Unexpected error loading quest file: " + file.getName(), e);
+                errorCount++;
+            }
+        }
+
+        if (errorCount > 0) {
+            this.plugin.getLogger().severe("Reload finished with " + errorCount + " errors. Only " + loadedCount + " quests were loaded.");
+        } else {
+            this.plugin.getLogger().info("Successfully loaded " + loadedCount + " quests.");
+        }
+    }
+
+    private ValidationResult validateQuestFile(File file) {
+        ValidationResult result = new ValidationResult();
+        try (InputStream is = new FileInputStream(file)) {
+            Map<String, Object> data = (Map<String, Object>) this.yaml.load(is);
+            if (data == null) {
+                result.addError("YAML data is empty");
+                return result;
+            }
+
+            String id = (String) data.getOrDefault("QuestID", data.getOrDefault("id", file.getName().replace(".yml", "").replace(".yaml", "")));
+
+            String initialStage = (String) data.get("InitialStage");
+            if (initialStage == null) initialStage = (String) data.get("initial_stage");
+            if (initialStage == null) initialStage = (String) data.get("initialStage");
+
+            Map<String, Object> stagesRaw = (Map<String, Object>) data.get("Stages");
+            if (stagesRaw == null) stagesRaw = (Map<String, Object>) data.get("stages");
+
+            if (stagesRaw == null || stagesRaw.isEmpty()) {
+                result.addError("Quest has no stages defined.");
+            } else {
+                if (initialStage != null && !stagesRaw.containsKey(initialStage)) {
+                    result.addError("Initial stage '" + initialStage + "' is not defined in stages.");
+                } else if (initialStage == null) {
+                    result.addWarning("Initial stage is not explicitly defined. Using the first defined stage.");
+                }
+
+                for (Map.Entry<String, Object> entry : stagesRaw.entrySet()) {
+                    String stageId = entry.getKey();
+                    Object val = entry.getValue();
+                    if (val instanceof Map) {
+                        validateStage(id, stageId, (Map<String, Object>) val, stagesRaw, result);
+                    } else {
+                        result.addError("Stage '" + stageId + "' must be a map object.");
+                    }
+                }
+            }
+
+            Object triggersRaw = data.get("StartTriggers");
+            if (triggersRaw == null) triggersRaw = data.get("start_triggers");
+            if (triggersRaw == null) triggersRaw = data.get("triggers");
+
+            if (triggersRaw != null) {
+                List<TriggerData> startTriggers = parseTriggers(triggersRaw);
+                for (TriggerData td : startTriggers) {
+                    result.merge("[StartTrigger: " + td.type + "] ", TriggerRegistry.validateTrigger(td));
+                }
+            }
+
+        } catch (Exception e) {
+            result.addError("Parse error: " + e.getMessage());
+        }
+        return result;
+    }
+
+    private void validateStage(String questId, String stageId, Map<String, Object> data, Map<String, Object> allStages, ValidationResult result) {
+        String prefix = "[Stage: " + stageId + "] ";
+
+        Object triggerObj = data.get("Triggers");
+        if (triggerObj == null) triggerObj = data.get("triggers");
+        if (triggerObj == null) triggerObj = data.get("trigger");
+
+        if (triggerObj != null) {
+            List<TriggerData> triggers = parseTriggers(triggerObj);
+            for (TriggerData td : triggers) {
+                result.merge(prefix + "[Trigger: " + td.type + "] ", TriggerRegistry.validateTrigger(td));
+            }
+        }
+
+        Object actionObj = data.get("Actions");
+        if (actionObj == null) actionObj = data.get("actions");
+
+        if (actionObj instanceof List) {
+            List<ActionData> actions = parseActions((List<Object>) actionObj);
+            for (ActionData ad : actions) {
+                ValidationResult actionRes = ActionRegistry.validateAction(ad);
+                result.merge(prefix + "[Action: " + ad.type + "] ", actionRes);
+
+                // Cross-reference check for 'next' action
+                if ("next".equalsIgnoreCase(ad.type)) {
+                    Object target = ad.params.get("value");
+                    if (target != null && !allStages.containsKey(String.valueOf(target))) {
+                        result.addError(prefix + "Next action points to non-existent stage: " + target);
+                    }
+                }
             }
         }
     }

@@ -1,14 +1,20 @@
 package com.lunar_prototype.eqf.execution;
 
 import com.lunar_prototype.eqf.EQFPlugin;
+import com.lunar_prototype.eqf.api.ActionResult;
 import com.lunar_prototype.eqf.api.PlayerQuestState;
+import com.lunar_prototype.eqf.model.ActionData;
 import com.lunar_prototype.eqf.model.Quest;
+import com.lunar_prototype.eqf.model.Stage;
 import com.lunar_prototype.eqf.persistence.PersistenceAdapter;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.logging.Level;
 import org.bukkit.entity.Player;
 
 /* JADX INFO: loaded from: EQF-Project-1.0-SNAPSHOT.jar:com/lunar_prototype/eqf/execution/QuestManager.class */
@@ -98,7 +104,39 @@ public class QuestManager {
         state.setCurrentStage(firstStageId);
         state.setStarted(true);
         this.plugin.getLogger().info(player.getName() + " started quest: " + questId + " at stage: " + firstStageId);
-        savePlayerStates(player.getUniqueId());
+
+        Stage firstStage = quest.getStages().get(firstStageId);
+        if (firstStage != null) {
+            executeStageActions(player, quest, firstStage, state);
+        } else {
+            savePlayerStates(player.getUniqueId());
+        }
+    }
+
+    public void executeStageActions(Player player, Quest quest, Stage stage, PlayerQuestState state) {
+        if (state.isExecuting()) {
+            return;
+        }
+        state.setExecuting(true);
+        try {
+            CompletableFuture<ActionResult> future = ActionExecutor.executeActions(player, quest, stage.getActions());
+            if (future != null) {
+                future.whenComplete((result, ex) -> {
+                    state.setExecuting(false);
+                    savePlayerStates(player.getUniqueId());
+                    if (ex != null) {
+                        this.plugin.getLogger().log(Level.SEVERE, "Error during action execution sequence", ex);
+                    }
+                });
+            } else {
+                state.setExecuting(false);
+                savePlayerStates(player.getUniqueId());
+            }
+        } catch (Exception e) {
+            this.plugin.getLogger().log(Level.SEVERE, "Error executing actions", (Throwable) e);
+            state.setExecuting(false);
+            savePlayerStates(player.getUniqueId());
+        }
     }
 
     public Map<String, Quest> getQuestDefinitions() {

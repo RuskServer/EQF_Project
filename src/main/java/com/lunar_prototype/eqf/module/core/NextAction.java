@@ -41,5 +41,19 @@ public class NextAction implements EQFAction {
             }
             return new NextAction(String.valueOf(value));
         }
+
+        @Override
+        public com.lunar_prototype.eqf.api.ValidationResult validate(Map<String, Object> params) {
+            com.lunar_prototype.eqf.api.ValidationResult result = new com.lunar_prototype.eqf.api.ValidationResult();
+            if (!params.containsKey("value")) {
+                result.addError("Next action requires a 'value' (stage ID).");
+            } else {
+                Object value = params.get("value");
+                if (value == null || String.valueOf(value).trim().isEmpty()) {
+                    result.addError("Next action stage ID cannot be empty.");
+                }
+            }
+            return result;
+        }
     }
 }

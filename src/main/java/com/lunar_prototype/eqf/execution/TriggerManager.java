@@ -98,15 +98,7 @@ public class TriggerManager implements Listener {
                             }
                             updateDebounce(player.getUniqueId());
                             this.plugin.getLogger().info(player.getName() + " started quest via trigger: " + quest.getId());
-                            state.setExecuting(true);
                             this.questManager.startQuest(player, quest.getId());
-                            String firstStageId = state.getCurrentStage();
-                            Stage firstStage = quest.getStages().get(firstStageId);
-                            if (firstStage != null) {
-                                executeActionsWithLock(player, quest, firstStage.getActions(), state);
-                            } else {
-                                state.setExecuting(false);
-                            }
                             handled = true;
                         }
                     }
@@ -118,8 +110,7 @@ public class TriggerManager implements Listener {
                         }
                         updateDebounce(player.getUniqueId());
                         this.plugin.getLogger().info(player.getName() + " advanced quest: " + quest.getId());
-                        state.setExecuting(true);
-                        executeActionsWithLock(player, quest, currentStage.getActions(), state);
+                        this.questManager.executeStageActions(player, quest, currentStage, state);
                         handled = true;
                     }
                 }
@@ -136,27 +127,6 @@ public class TriggerManager implements Listener {
 
     private void updateDebounce(UUID playerUUID) {
         this.executionDebounce.put(playerUUID, Long.valueOf(System.currentTimeMillis()));
-    }
-
-    private void executeActionsWithLock(Player player, Quest quest, List<ActionData> actions, PlayerQuestState state) {
-        try {
-            CompletableFuture<?> future = ActionExecutor.executeActions(player, quest, actions);
-            if (future != null) {
-                future.whenComplete((result, ex) -> {
-                    state.setExecuting(false);
-                    this.questManager.savePlayerStates(player.getUniqueId());
-                    if (ex != null) {
-                        this.plugin.getLogger().log(Level.SEVERE, "Error during action execution sequence", ex);
-                    }
-                });
-            } else {
-                state.setExecuting(false);
-                this.questManager.savePlayerStates(player.getUniqueId());
-            }
-        } catch (Exception e) {
-            this.plugin.getLogger().log(Level.SEVERE, "Error executing actions", (Throwable) e);
-            state.setExecuting(false);
-        }
     }
 
     private <E extends Event> boolean checkTriggers(List<TriggerData> triggerDatas, E event, PlayerQuestState state) {

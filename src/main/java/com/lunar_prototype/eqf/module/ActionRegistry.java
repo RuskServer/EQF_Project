@@ -2,6 +2,7 @@ package com.lunar_prototype.eqf.module;
 
 import com.lunar_prototype.eqf.api.EQFAction;
 import com.lunar_prototype.eqf.api.EQFActionFactory;
+import com.lunar_prototype.eqf.api.ValidationResult;
 import com.lunar_prototype.eqf.model.ActionData;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -17,6 +18,17 @@ public class ActionRegistry {
             throw new IllegalArgumentException("Action ID already registered: " + id);
         }
         FACTORIES.put(id.toLowerCase(), factory);
+    }
+
+    public static ValidationResult validateAction(ActionData data) {
+        ValidationResult result = new ValidationResult();
+        String type = data.type.toLowerCase();
+        EQFActionFactory factory = FACTORIES.get(type);
+        if (factory == null) {
+            result.addError("Unknown Action Type: " + type);
+            return result;
+        }
+        return factory.validate(data.params);
     }
 
     public static EQFAction createAction(ActionData data) {
